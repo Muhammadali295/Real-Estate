@@ -49,4 +49,37 @@ export const signin = async (req, res, next) => {
     catch (error) {
         next(error);
       }
-    }
+    };
+    export const google = async (req, res, next) => {
+        try {
+          const user = await User.findOne({ email: req.body.email })
+        //   user exist
+          if (user) {
+            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+            const { password: pass, ...rest } = user._doc;
+            // don't send password
+            res
+              .cookie('access_token', token, { httpOnly: true })
+              .status(200)
+              .json(rest);
+            //   send back user data
+      
+          } else {
+            // we need to create the password as it is required for signin
+            const generatedPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+            // numbers from 0-9 & letters from A to Z, get last 8 digit => 16 charecters password
+            const hashedPassword = bcryptjs.hashSync(generatedPassword, 10);
+            // hashed password
+            const newUser = new User({ username: req.body.name.split(" ").join("").toLowerCase() + Math.random().toString(36).slice(-4) , email: req.body.email, password: hashedPassword, avatar: req.body.photo });
+            // save user
+            await newUser.save();
+            const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET);
+            // create tokken
+            const { password: pass, ...rest } = newUser._doc;
+            res.cookie('access_token', token, { httpOnly: true }).status(200).json(rest);
+      
+          }
+        } catch (error) {
+          next(error)
+        }
+      };
